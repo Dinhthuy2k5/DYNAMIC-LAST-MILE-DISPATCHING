@@ -1,0 +1,77 @@
+{
+  "RouteID_SAMPLE01": {
+    "station_code": "DHU1",
+    "date_YYYY_MM_DD": "2026-03-02",
+    "departure_time_utc": "08:00:00",
+    "executor_capacity_cm3": 4247527,
+    "route_score": "High",
+    "stops": {
+      "StopID_STATION": {
+        "lat": 47.6101,
+        "lng": -122.2015,
+        "type": "Station",
+        "zone_id": null
+      },
+      "StopID_001": {
+        "lat": 47.587967,
+        "lng": -122.162577,
+        "type": "Dropoff",
+        "zone_id": "A-5.A"
+      },
+      "StopID_002": {
+        "lat": 47.566065,
+        "lng": -122.248767,
+        "type": "Dropoff",
+        "zone_id": "A-8.B"
+      },
+      "StopID_003": {
+        "lat": 47.603295,
+        "lng": -122.203929,
+        "type": "Dropoff",
+        "zone_id": "A-2.B"
+      },
+      "StopID_004": {
+        "lat": 47.573354,
+        "lng": -122.153606,
+        "type": "Dropoff",
+        "zone_id": "A-7.C"
+      },
+      "StopID_005": {
+        "lat": 47.568167,
+        "lng": -122.203971,
+        "type": "Dropoff",
+        "zone_id": "A-9.B"
+      },
+      "StopID_006": {
+        "lat": 47.644187,
+        "lng": -122.246465,
+        "type": "Dropoff",
+        "zone_id": "A-2.B"
+      },
+      "StopID_007": {
+        "lat": 47.585406,
+        "lng": -122.181643,
+        "type": "Dropoff",
+        "zone_id": "A-5.A"
+      },
+      "StopID_008": {
+        "lat": 47.58857,
+        "lng": -122.232251,
+        "type": "Dropoff",
+        "zone_id": "A-6.A"
+      },
+      "StopID_009": {
+        "lat": 47.623907,
+        "lng": -122.17601,
+        "type": "Dropoff",
+        "zone_id": "A-9.C"
+      },
+      "StopID_010": {
+        "lat": 47.629685,
+        "lng": -122.174754,
+        "type": "Dropoff",
+        "zone_id": "A-1.A"
+      }
+    }
+  }
+}

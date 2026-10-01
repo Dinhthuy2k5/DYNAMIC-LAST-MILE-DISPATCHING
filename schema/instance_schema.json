@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "instance_schema.json",
+  "title": "Canonical DVRPTW Snapshot Instance (v2)",
+  "description": "Định dạng chung mà mọi nguồn dữ liệu (Solomon, Amazon Last-Mile, synthetic) phải normalize về. v2: khớp đúng field của Domain Model (Thiết kế hệ thống, Mục 4.1) — thêm scenario_id, order.release_time/status, vehicle.status/remaining_capacity, đổi tên due_time->deadline và start_location->current_stop.",
+  "type": "object",
+  "required": ["instance_id", "scenario_id", "source", "depot", "vehicles", "orders", "distance_matrix"],
+  "properties": {
+    "instance_id": {
+      "type": "string",
+      "description": "Id của snapshot cụ thể này (StateSnapshot ở Mục 4.1) — mỗi lần re-plan sẽ có instance_id khác nhau trong cùng 1 scenario."
+    },
+    "scenario_id": {
+      "type": "string",
+      "description": "Scope của 1 simulation/experiment (Scenario entity, Mục 4.1). Với instance tĩnh độc lập (Solomon/Amazon ở W2, chưa chạy trong 1 scenario mô phỏng thật), mặc định scenario_id = instance_id."
+    },
+    "source": { "type": "string", "enum": ["solomon", "amazon", "synthetic"] },
+
+    "depot": {
+      "type": "object",
+      "required": ["id", "x", "y"],
+      "properties": {
+        "id": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+
+    "vehicles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "capacity", "remaining_capacity", "status", "current_stop", "start_time"],
+        "properties": {
+          "id": { "type": "string" },
+          "capacity": {
+            "type": "number", "minimum": 0,
+            "description": "Capacity GỐC của xe (không đổi trong suốt scenario)."
+          },
+          "remaining_capacity": {
+            "type": "number", "minimum": 0,
+            "description": "Q_k trong Problem Specification v1 Mục 1 — capacity CÒN LẠI tại snapshot này (đã trừ phần đang chở dở nếu xe đang EN_ROUTE). Với snapshot đầu tiên (t=0, chưa chở gì): remaining_capacity = capacity."
+          },
+          "status": {
+            "type": "string", "enum": ["AVAILABLE", "IN_ROUTE", "UNAVAILABLE"],
+            "description": "State machine Mục 4.3. UNAVAILABLE (breakdown) không được nhận order mới — validator/greedy phải loại xe này khỏi assignment."
+          },
+          "current_stop": {
+            "type": "string",
+            "description": "o_k trong Problem Specification v1 — node id hiện tại trong distance_matrix. Thường = depot.id ở snapshot đầu; khác depot khi xe đang EN_ROUTE ở snapshot sau."
+          },
+          "start_time": {
+            "type": "number", "minimum": 0,
+            "description": "Mốc thời gian xe bắt đầu di chuyển từ current_stop trong snapshot này (không có trong bảng entity gốc, thêm vì cần cho mô phỏng arrival time — xem README)."
+          }
+        }
+      }
+    },
+
+    "orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "x", "y", "demand", "release_time", "ready_time", "deadline", "service_time", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "demand": { "type": "number", "minimum": 0 },
+          "release_time": {
+            "type": "number", "minimum": 0,
+            "description": "Thời điểm order XUẤT HIỆN trong scenario (khi hệ thống biết đến order này) — khác ready_time. Với instance tĩnh (mọi order biết từ đầu, đúng bản chất Solomon/Amazon snapshot 1 lần): release_time = 0 cho tất cả."
+          },
+          "ready_time": {
+            "type": "number", "minimum": 0,
+            "description": "a_i — HARD, đã chốt ở Problem Specification v1 Mục 3: không được service trước thời điểm này (được phép chờ)."
+          },
+          "deadline": {
+            "type": "number", "minimum": 0,
+            "description": "b_i — SOFT, đã chốt ở Problem Specification v1 Mục 3: cho phép trễ, bị phạt trong objective chứ không làm infeasible."
+          },
+          "service_time": { "type": "number", "minimum": 0 },
+          "status": {
+            "type": "string",
+            "enum": ["CREATED", "PENDING", "ASSIGNED", "IN_SERVICE", "DELIVERED", "UNSERVED", "CANCELLED"],
+            "description": "State machine Mục 4.2. Với instance tĩnh đầu vào (trước khi chạy Greedy Insertion): mặc định PENDING."
+          }
+        }
+      }
+    },
+
+    "distance_matrix": {
+      "type": "object",
+      "description": "node_id -> node_id -> travel_time (cùng đơn vị thời gian với ready_time/deadline/service_time). Phải chứa depot.id, mọi order.id, mọi vehicle.current_stop.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

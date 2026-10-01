@@ -1,0 +1,17 @@
+{
+  "routes": {
+    "RouteID_SAMPLE01": [
+      "StopID_006",
+      "StopID_010",
+      "StopID_009",
+      "StopID_001",
+      "StopID_004",
+      "StopID_007",
+      "StopID_005",
+      "StopID_002",
+      "StopID_008",
+      "StopID_003"
+    ]
+  },
+  "unserved": []
+}

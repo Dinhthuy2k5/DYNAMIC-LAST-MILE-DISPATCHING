@@ -1,0 +1,19 @@
+{
+  "instance_id": "RouteID_SAMPLE01",
+  "source": "amazon",
+  "instance_structural_issues": [],
+  "status": "OK",
+  "feasible": true,
+  "violations": [],
+  "metrics": {
+    "total_travel_time": 4581.4,
+    "total_lateness": 0.0,
+    "num_late_orders": 0,
+    "num_unserved": 0,
+    "vehicles_used": 1,
+    "greedy_insertion_runtime_sec": 0.0026,
+    "num_orders": 10,
+    "num_vehicles_available": 1
+  },
+  "planning_time": 0.0
+}

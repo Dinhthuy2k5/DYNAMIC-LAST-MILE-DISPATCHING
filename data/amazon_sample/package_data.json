@@ -1,0 +1,284 @@
+{
+  "RouteID_SAMPLE01": {
+    "StopID_001": {
+      "PackageID_001_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 19,
+          "height_cm": 29,
+          "width_cm": 38
+        }
+      }
+    },
+    "StopID_002": {
+      "PackageID_002_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 45,
+        "dimensions": {
+          "depth_cm": 14,
+          "height_cm": 16,
+          "width_cm": 32
+        }
+      }
+    },
+    "StopID_003": {
+      "PackageID_003_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 24,
+          "height_cm": 23,
+          "width_cm": 17
+        }
+      },
+      "PackageID_003_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 15,
+          "height_cm": 14,
+          "width_cm": 39
+        }
+      }
+    },
+    "StopID_004": {
+      "PackageID_004_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 45,
+        "dimensions": {
+          "depth_cm": 36,
+          "height_cm": 10,
+          "width_cm": 21
+        }
+      },
+      "PackageID_004_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 10:00:00",
+          "end_time_utc": "2026-03-02 12:00:00"
+        },
+        "planned_service_time_seconds": 60,
+        "dimensions": {
+          "depth_cm": 31,
+          "height_cm": 18,
+          "width_cm": 37
+        }
+      },
+      "PackageID_004_3": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 40,
+          "height_cm": 16,
+          "width_cm": 33
+        }
+      }
+    },
+    "StopID_005": {
+      "PackageID_005_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 12:00:00",
+          "end_time_utc": "2026-03-02 14:00:00"
+        },
+        "planned_service_time_seconds": 90,
+        "dimensions": {
+          "depth_cm": 24,
+          "height_cm": 31,
+          "width_cm": 30
+        }
+      },
+      "PackageID_005_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 11,
+          "height_cm": 12,
+          "width_cm": 24
+        }
+      }
+    },
+    "StopID_006": {
+      "PackageID_006_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 09:00:00",
+          "end_time_utc": "2026-03-02 11:00:00"
+        },
+        "planned_service_time_seconds": 45,
+        "dimensions": {
+          "depth_cm": 24,
+          "height_cm": 31,
+          "width_cm": 20
+        }
+      },
+      "PackageID_006_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 60,
+        "dimensions": {
+          "depth_cm": 14,
+          "height_cm": 15,
+          "width_cm": 18
+        }
+      },
+      "PackageID_006_3": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 60,
+        "dimensions": {
+          "depth_cm": 10,
+          "height_cm": 29,
+          "width_cm": 22
+        }
+      }
+    },
+    "StopID_007": {
+      "PackageID_007_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 13,
+          "height_cm": 37,
+          "width_cm": 39
+        }
+      }
+    },
+    "StopID_008": {
+      "PackageID_008_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 13:00:00",
+          "end_time_utc": "2026-03-02 15:00:00"
+        },
+        "planned_service_time_seconds": 90,
+        "dimensions": {
+          "depth_cm": 35,
+          "height_cm": 18,
+          "width_cm": 37
+        }
+      },
+      "PackageID_008_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 32,
+          "height_cm": 33,
+          "width_cm": 22
+        }
+      }
+    },
+    "StopID_009": {
+      "PackageID_009_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 09:00:00",
+          "end_time_utc": "2026-03-02 11:00:00"
+        },
+        "planned_service_time_seconds": 60,
+        "dimensions": {
+          "depth_cm": 31,
+          "height_cm": 35,
+          "width_cm": 21
+        }
+      },
+      "PackageID_009_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 11:00:00",
+          "end_time_utc": "2026-03-02 13:00:00"
+        },
+        "planned_service_time_seconds": 45,
+        "dimensions": {
+          "depth_cm": 25,
+          "height_cm": 24,
+          "width_cm": 19
+        }
+      },
+      "PackageID_009_3": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": "2026-03-02 09:00:00",
+          "end_time_utc": "2026-03-02 11:00:00"
+        },
+        "planned_service_time_seconds": 90,
+        "dimensions": {
+          "depth_cm": 30,
+          "height_cm": 18,
+          "width_cm": 33
+        }
+      }
+    },
+    "StopID_010": {
+      "PackageID_010_1": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 12,
+          "height_cm": 16,
+          "width_cm": 31
+        }
+      },
+      "PackageID_010_2": {
+        "scan_status": "DELIVERED",
+        "time_window": {
+          "start_time_utc": null,
+          "end_time_utc": null
+        },
+        "planned_service_time_seconds": 30,
+        "dimensions": {
+          "depth_cm": 14,
+          "height_cm": 34,
+          "width_cm": 19
+        }
+      }
+    }
+  }
+}
