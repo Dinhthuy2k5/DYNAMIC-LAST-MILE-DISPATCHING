@@ -11,19 +11,19 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from validator import validate_instance, validate_plan, simulate_route  # noqa: E402
-from greedy_insertion import greedy_insertion  # noqa: E402
-from normalize_amazon import normalize_route  # noqa: E402
+from validation.validator import validate_instance, validate_plan, simulate_route  # noqa: E402
+from optimization.greedy_insertion import greedy_insertion  # noqa: E402
+from adapters.datasets.amazon.normalize_amazon import normalize_route  # noqa: E402
 
 
 def make_trivial_instance():
     """
     Depot tại (0,0). 2 order thẳng hàng trên trục X: A tại x=10, B tại x=20.
-    1 xe, capacity đủ cho cả 2. distance = |x1-x2| (đường thẳng, dựng tay để
+    1 xe, capacity đủ cho cả 2. travel time = |x1-x2| (đường thẳng, dựng tay để
     dễ kiểm tra bằng tay: đi 0->A->B->? chỉ cần A trước B là tối ưu vì cùng hướng).
     """
     return {
-        "instance_id": "trivial", "scenario_id": "trivial", "source": "synthetic",
+        "instance_id": "trivial", "scenario_id": "trivial", "source": "synthetic", "matrix_version": 0,
         "depot": {"id": "D", "x": 0, "y": 0},
         "vehicles": [{
             "id": "V1", "capacity": 100, "remaining_capacity": 100,
@@ -35,7 +35,7 @@ def make_trivial_instance():
             {"id": "B", "x": 20, "y": 0, "demand": 5, "release_time": 0, "ready_time": 0,
              "deadline": 1000, "service_time": 0, "status": "PENDING"},
         ],
-        "distance_matrix": {
+        "time_matrix": {
             "D": {"D": 0, "A": 10, "B": 20},
             "A": {"D": 10, "A": 0, "B": 10},
             "B": {"D": 20, "A": 10, "B": 0},
@@ -48,9 +48,9 @@ class TestValidatorStructure(unittest.TestCase):
         issues = validate_instance(make_trivial_instance())
         self.assertEqual(issues, [])
 
-    def test_missing_distance_matrix_entry_detected(self):
+    def test_missing_time_matrix_entry_detected(self):
         inst = make_trivial_instance()
-        del inst["distance_matrix"]["A"]["B"]
+        del inst["time_matrix"]["A"]["B"]
         issues = validate_instance(inst)
         self.assertTrue(any("thiếu cột" in i for i in issues))
 
@@ -244,7 +244,7 @@ class TestAmazonNormalization(unittest.TestCase):
         }}}
         travel_times = {"R1": {"DEPOT": {"DEPOT": 0, "S1": 60}, "S1": {"DEPOT": 60, "S1": 0}}}
 
-        instance = normalize_route("R1", route_data, package_data, travel_times)
+        instance = normalize_route("R1", route_data, package_data, travel_times).to_dict()
         stop = instance["orders"][0]
         self.assertEqual(stop["ready_time"], 7200)
         self.assertEqual(stop["deadline"], 10800)

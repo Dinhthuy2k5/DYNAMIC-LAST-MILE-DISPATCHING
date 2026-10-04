@@ -15,24 +15,29 @@ Plan format kỳ vọng:
   "unserved": ["<order_id>", ...]
 }
 """
+from domain.entities import snapshot_payload
 
 
 def validate_instance(instance):
     """Kiểm tra cấu trúc dữ liệu instance (không liên quan đến plan)."""
+    instance = snapshot_payload(instance)
     issues = []
+    matrix_version = instance.get("matrix_version")
+    if not isinstance(matrix_version, int) or isinstance(matrix_version, bool) or matrix_version < 0:
+        issues.append("matrix_version phải là số nguyên không âm.")
     order_ids = [o["id"] for o in instance["orders"]]
     if len(order_ids) != len(set(order_ids)):
         issues.append("Trùng order id trong instance.")
 
-    dm = instance["distance_matrix"]
+    time_matrix = instance["time_matrix"]
     all_node_ids = {instance["depot"]["id"]} | set(order_ids) | {v["current_stop"] for v in instance["vehicles"]}
     for nid in all_node_ids:
-        if nid not in dm:
-            issues.append(f"Node '{nid}' không có hàng trong distance_matrix.")
+        if nid not in time_matrix:
+            issues.append(f"Node '{nid}' không có hàng trong time_matrix.")
             continue
         for other in all_node_ids:
-            if other not in dm[nid]:
-                issues.append(f"distance_matrix['{nid}'] thiếu cột đến '{other}'.")
+            if other not in time_matrix[nid]:
+                issues.append(f"time_matrix['{nid}'] thiếu cột đến '{other}'.")
 
     for o in instance["orders"]:
         if o["ready_time"] > o["deadline"]:
@@ -50,7 +55,8 @@ def validate_instance(instance):
 
 
 def active_order_ids(instance, planning_time=0.0):
-    """Orders released by planning_time and not in a terminal state."""
+    """Lấy các order đã release tại planning_time và chưa ở trạng thái kết thúc."""
+    instance = snapshot_payload(instance)
     terminal = {"DELIVERED", "CANCELLED"}
     return {
         o["id"] for o in instance["orders"]
@@ -58,23 +64,24 @@ def active_order_ids(instance, planning_time=0.0):
     }
 
 
-def simulate_route(vehicle, order_seq, instance):
+def simulate_route(vehicle, order_seq, instance, planning_time=0.0):
     """
     Mô phỏng 1 route theo thứ tự order_seq (list order_id) của 1 vehicle.
     Trả về danh sách stop-event: [{order_id, arrival, wait, start_service, depart, lateness}, ...]
     và tổng travel_time của route.
     """
+    instance = snapshot_payload(instance)
     orders_by_id = {o["id"]: o for o in instance["orders"]}
-    dm = instance["distance_matrix"]
+    time_matrix = instance["time_matrix"]
 
     events = []
     current_node = vehicle["current_stop"]
-    current_time = vehicle["start_time"]
+    current_time = max(float(vehicle["start_time"]), float(planning_time))
     total_travel = 0.0
 
     for oid in order_seq:
         o = orders_by_id[oid]
-        travel = dm[current_node][oid]
+        travel = time_matrix[current_node][oid]
         arrival = current_time + travel
         start_service = max(arrival, o["ready_time"], o["release_time"])  # không service trước release/ready
         wait = start_service - arrival
@@ -89,9 +96,9 @@ def simulate_route(vehicle, order_seq, instance):
         current_node = oid
         current_time = depart
 
-    # DVRPTW routes return to the depot; include this final leg in route cost.
+    # Route DVRPTW quay về depot; tính chặng cuối này vào chi phí route.
     if order_seq:
-        total_travel += dm[current_node][instance["depot"]["id"]]
+        total_travel += time_matrix[current_node][instance["depot"]["id"]]
 
     return events, total_travel
 
@@ -112,6 +119,7 @@ def validate_plan(instance, plan, planning_time=0.0):
       "per_vehicle": { vehicle_id: [stop-event, ...] }
     }
     """
+    instance = snapshot_payload(instance)
     violations = []
     orders_by_id = {o["id"]: o for o in instance["orders"]}
     vehicles_by_id = {v["id"]: v for v in instance["vehicles"]}
@@ -122,7 +130,7 @@ def validate_plan(instance, plan, planning_time=0.0):
         served_ids.extend(route)
     unserved_ids = set(plan.get("unserved", []))
 
-    # continuity / coverage: mỗi order đúng 1 lần (served hoặc unserved), không thiếu không thừa
+    # Tính liên tục/phủ đủ: mỗi order xuất hiện đúng một lần (được phục vụ hoặc unserved).
     if len(served_ids) != len(set(served_ids)):
         violations.append("Có order bị lặp lại ở nhiều route hoặc trong cùng 1 route.")
     covered = set(served_ids) | unserved_ids
@@ -152,17 +160,17 @@ def validate_plan(instance, plan, planning_time=0.0):
 
         vehicle = vehicles_by_id[vid]
 
-        # HARD: vehicle UNAVAILABLE không được nhận order (business invariant, Mục 4.5)
+        # Ràng buộc cứng: xe UNAVAILABLE không được nhận order (bất biến nghiệp vụ, Mục 4.5).
         if vehicle["status"] == "UNAVAILABLE":
             violations.append(f"Vehicle {vid}: đang UNAVAILABLE nhưng được gán {len(route)} order trong plan.")
 
-        events, travel = simulate_route(vehicle, route, instance)
+        events, travel = simulate_route(vehicle, route, instance, planning_time=planning_time)
         per_vehicle[vid] = events
         vehicles_used += 1
         total_travel_time += travel
 
-        # HARD: capacity — so với remaining_capacity (Q_k còn lại tại snapshot này),
-        # KHÔNG phải capacity gốc, đúng Problem Specification v1 Mục 1.
+        # Ràng buộc cứng về tải: so với remaining_capacity (Q_k còn lại tại snapshot này),
+        # không phải capacity gốc, đúng theo Đặc tả bài toán v1, Mục 1.
         load = sum(orders_by_id[oid]["demand"] for oid in route)
         if load > vehicle["remaining_capacity"] + 1e-9:
             violations.append(
@@ -171,8 +179,8 @@ def validate_plan(instance, plan, planning_time=0.0):
 
         for ev in events:
             if ev["arrival"] < orders_by_id[ev["order_id"]]["ready_time"] - 1e-9 and ev["wait"] < -1e-9:
-                # về lý thuyết không thể xảy ra vì start_service = max(arrival, ready_time),
-                # giữ kiểm tra này như một invariant an toàn (defensive check)
+                # Về lý thuyết không thể xảy ra vì start_service = max(arrival, ready_time);
+                # vẫn giữ kiểm tra này như một bất biến an toàn để phòng thủ.
                 violations.append(f"Order {ev['order_id']}: được service trước ready_time (lỗi mô phỏng).")
             if ev["lateness"] > 1e-9:
                 num_late_orders += 1

@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "instance_schema.json",
-  "title": "Canonical DVRPTW Snapshot Instance (v2)",
-  "description": "Định dạng chung mà mọi nguồn dữ liệu (Solomon, Amazon Last-Mile, synthetic) phải normalize về. v2: khớp đúng field của Domain Model (Thiết kế hệ thống, Mục 4.1) — thêm scenario_id, order.release_time/status, vehicle.status/remaining_capacity, đổi tên due_time->deadline và start_location->current_stop.",
+  "title": "Canonical DVRPTW Snapshot Instance (v4)",
+  "description": "Định dạng chung mà mọi nguồn dữ liệu (Solomon, Amazon Last-Mile, synthetic) phải normalize về. state_version định danh snapshot trạng thái; matrix_version định danh phiên bản ma trận travel time. current_stop là vị trí hiện tại theo node ID, có thể là virtual node trên đường và khi đó time_matrix của snapshot phải có hàng/cột tương ứng.",
   "type": "object",
-  "required": ["instance_id", "scenario_id", "source", "depot", "vehicles", "orders", "distance_matrix"],
+  "required": ["instance_id", "scenario_id", "source", "depot", "vehicles", "orders", "matrix_version", "time_matrix"],
   "properties": {
     "instance_id": {
       "type": "string",
@@ -13,6 +13,17 @@
     "scenario_id": {
       "type": "string",
       "description": "Scope của 1 simulation/experiment (Scenario entity, Mục 4.1). Với instance tĩnh độc lập (Solomon/Amazon ở W2, chưa chạy trong 1 scenario mô phỏng thật), mặc định scenario_id = instance_id."
+    },
+    "state_version": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "v — phiên bản snapshot dùng làm base_state_version khi tạo candidate plan. Đây là metadata điều phối, không phải biến routing. Nếu vắng mặt, W2/W3 xem snapshot là version 0."
+    },
+    "matrix_version": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Phiên bản của time_matrix tại snapshot. Tăng version mỗi khi nội dung ma trận thay đổi; candidate plan ghi lại base_matrix_version để phát hiện kế hoạch được tạo từ ma trận cũ. Instance tĩnh bắt đầu ở version 0."
     },
     "source": { "type": "string", "enum": ["solomon", "amazon", "synthetic"] },
 
@@ -48,7 +59,7 @@
           },
           "current_stop": {
             "type": "string",
-            "description": "o_k trong Problem Specification v1 — node id hiện tại trong distance_matrix. Thường = depot.id ở snapshot đầu; khác depot khi xe đang EN_ROUTE ở snapshot sau."
+            "description": "Vị trí hiện tại của xe tại snapshot, được biểu diễn bằng node ID trong time_matrix. Có thể là depot, customer hoặc virtual node trên một cung đường. Nếu là vị trí mới trên đường, snapshot producer phải cập nhật travel-time matrix tới/từ vị trí này trước khi solve. Optimizer sẽ tạo một solver-only virtual start riêng cho xe từ node này."
           },
           "start_time": {
             "type": "number", "minimum": 0,
@@ -90,9 +101,9 @@
       }
     },
 
-    "distance_matrix": {
+    "time_matrix": {
       "type": "object",
-      "description": "node_id -> node_id -> travel_time (cùng đơn vị thời gian với ready_time/deadline/service_time). Phải chứa depot.id, mọi order.id, mọi vehicle.current_stop.",
+      "description": "Ma trận thời gian di chuyển có hướng: from_node -> to_node -> travel_time tính bằng giây (cùng đơn vị với ready_time/deadline/service_time). Trường này không lưu quãng đường. Phải chứa depot.id, mọi order.id, mọi vehicle.current_stop. Với current_stop là vị trí mới trên đường, cần có travel time từ vị trí đó tới mọi node và ngược lại trong snapshot hiện hành.",
       "additionalProperties": {
         "type": "object",
         "additionalProperties": { "type": "number", "minimum": 0 }

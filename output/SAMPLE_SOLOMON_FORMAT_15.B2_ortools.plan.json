@@ -1,0 +1,39 @@
+{
+  "plan": {
+    "routes": {
+      "V1": [],
+      "V2": [
+        "2",
+        "13",
+        "15",
+        "11",
+        "8"
+      ],
+      "V3": [
+        "5",
+        "3"
+      ],
+      "V4": [],
+      "V5": [
+        "6",
+        "14",
+        "7",
+        "4",
+        "1",
+        "10",
+        "9",
+        "12"
+      ]
+    },
+    "unserved": [],
+    "base_state_version": 0,
+    "base_matrix_version": 0
+  },
+  "metrics": {
+    "total_travel_time": 487.182,
+    "total_lateness": 0.0,
+    "num_late_orders": 0,
+    "num_unserved": 0,
+    "vehicles_used": 3
+  }
+}

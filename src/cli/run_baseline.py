@@ -14,15 +14,15 @@ import json
 import sys
 import time
 
-from greedy_insertion import greedy_insertion
-from validator import validate_instance, validate_plan
+from optimization.greedy_insertion import greedy_insertion
+from validation.validator import validate_instance, validate_plan
+from domain.codec import load_snapshot
 
 
 def run(instance_path, output_dir=None, planning_time=0.0):
-    with open(instance_path) as f:
-        instance = json.load(f)
+    instance = load_snapshot(instance_path)
 
-    report = {"instance_id": instance["instance_id"], "source": instance["source"]}
+    report = {"instance_id": instance.instance_id, "source": instance.source}
 
     struct_issues = validate_instance(instance)
     report["instance_structural_issues"] = struct_issues
@@ -40,12 +40,12 @@ def run(instance_path, output_dir=None, planning_time=0.0):
     report["violations"] = result["violations"]
     report["metrics"] = result["metrics"]
     report["metrics"]["greedy_insertion_runtime_sec"] = round(elapsed, 4)
-    report["metrics"]["num_orders"] = len(instance["orders"])
-    report["metrics"]["num_vehicles_available"] = len(instance["vehicles"])
+    report["metrics"]["num_orders"] = len(instance.orders)
+    report["metrics"]["num_vehicles_available"] = len(instance.vehicles)
     report["planning_time"] = planning_time
 
     if output_dir:
-        stem = instance["instance_id"]
+        stem = instance.instance_id
         with open(f"{output_dir}/{stem}.plan.json", "w") as f:
             json.dump(plan, f, indent=2, ensure_ascii=False)
         with open(f"{output_dir}/{stem}.report.json", "w") as f:

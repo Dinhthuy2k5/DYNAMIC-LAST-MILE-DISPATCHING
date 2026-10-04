@@ -1,6 +1,7 @@
 {
   "instance_id": "RouteID_SAMPLE01",
   "scenario_id": "RouteID_SAMPLE01",
+  "matrix_version": 0,
   "source": "amazon",
   "depot": {
     "id": "StopID_STATION",
@@ -129,7 +130,7 @@
       "status": "PENDING"
     }
   ],
-  "distance_matrix": {
+  "time_matrix": {
     "StopID_STATION": {
       "StopID_STATION": 0.0,
       "StopID_001": 548.7,

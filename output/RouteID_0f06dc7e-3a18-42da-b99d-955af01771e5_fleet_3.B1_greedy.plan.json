@@ -1,0 +1,50 @@
+{
+  "plan": {
+    "routes": {
+      "RouteID_0f06dc7e-3a18-42da-b99d-955af01771e5:vehicle_1": [
+        "AE",
+        "AB",
+        "BK",
+        "CB",
+        "AJ",
+        "DJ",
+        "DU",
+        "CD",
+        "BN",
+        "DP",
+        "BY",
+        "BM",
+        "BZ",
+        "AX",
+        "CT",
+        "BS",
+        "AH",
+        "CA",
+        "DC",
+        "CN",
+        "DA",
+        "CZ",
+        "DB",
+        "AW",
+        "AV",
+        "DW",
+        "CY",
+        "CX",
+        "CM",
+        "DN"
+      ],
+      "RouteID_0f06dc7e-3a18-42da-b99d-955af01771e5:vehicle_2": [],
+      "RouteID_0f06dc7e-3a18-42da-b99d-955af01771e5:vehicle_3": []
+    },
+    "unserved": [],
+    "base_state_version": 0,
+    "base_matrix_version": 0
+  },
+  "metrics": {
+    "total_travel_time": 8936.8,
+    "total_lateness": 0.0,
+    "num_late_orders": 0,
+    "num_unserved": 0,
+    "vehicles_used": 1
+  }
+}

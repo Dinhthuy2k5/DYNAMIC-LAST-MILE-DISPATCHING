@@ -1,8 +1,9 @@
 {
   "instance_id": "SAMPLE_SOLOMON_FORMAT_15",
   "scenario_id": "SAMPLE_SOLOMON_FORMAT_15",
-  "matrix_version": 0,
   "source": "solomon",
+  "state_version": 0,
+  "matrix_version": 0,
   "depot": {
     "id": "0",
     "x": 50.0,

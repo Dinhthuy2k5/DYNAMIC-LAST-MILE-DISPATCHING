@@ -4,13 +4,14 @@ instance schema (schema/instance_schema.json).
 
 Quy ước Solomon chuẩn:
 - Customer 0 = depot.
-- Travel time = khoảng cách Euclidean giữa 2 điểm (không có ma trận travel-time
-  riêng trong file gốc — phải tự tính).
+- File gốc không có travel time; project dùng khoảng cách Euclidean làm proxy,
+  theo giả định tốc độ 1 đơn vị tọa độ trên một đơn vị thời gian.
 - READY TIME / DUE DATE của customer 0 (depot) là horizon chung, không phải
   time window của một order.
 """
 import math
 import re
+from domain.entities import RoutingSnapshot
 
 
 def _euclidean(p1, p2):
@@ -69,24 +70,27 @@ def parse_solomon_file(path, instance_id=None):
         for k in range(veh_number)
     ]
 
-    # distance_matrix: Euclidean giữa mọi cặp node (đúng quy ước Solomon)
+    # Solomon không có ma trận thời gian riêng; dùng khoảng cách Euclid làm proxy
+    # travel time theo quy ước hiện tại (tốc độ giả định bằng 1 đơn vị tọa độ/đơn vị thời gian).
     nodes = [("0", (depot["x"], depot["y"]))] + [(o["id"], (o["x"], o["y"])) for o in orders]
-    distance_matrix = {}
+    time_matrix = {}
     for id_i, p_i in nodes:
-        distance_matrix[id_i] = {}
+        time_matrix[id_i] = {}
         for id_j, p_j in nodes:
-            distance_matrix[id_i][id_j] = 0.0 if id_i == id_j else _euclidean(p_i, p_j)
+            time_matrix[id_i][id_j] = 0.0 if id_i == id_j else _euclidean(p_i, p_j)
 
     iid = instance_id or name
-    return {
+    canonical_data = {
         "instance_id": iid,
         "scenario_id": iid,  # instance tĩnh độc lập -> scenario_id = instance_id
+        "matrix_version": 0,
         "source": "solomon",
         "depot": depot,
         "vehicles": vehicles,
         "orders": orders,
-        "distance_matrix": distance_matrix,
+        "time_matrix": time_matrix,
     }
+    return RoutingSnapshot.from_dict(canonical_data)
 
 
 if __name__ == "__main__":
@@ -95,4 +99,4 @@ if __name__ == "__main__":
 
     path = sys.argv[1] if len(sys.argv) > 1 else "data/solomon/SAMPLE_SOLOMON_FORMAT_15.txt"
     inst = parse_solomon_file(path)
-    print(json.dumps(inst, indent=2, ensure_ascii=False))
+    print(json.dumps(inst.to_dict(), indent=2, ensure_ascii=False))
