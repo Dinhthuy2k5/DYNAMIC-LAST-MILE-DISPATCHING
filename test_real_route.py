@@ -37,7 +37,7 @@ SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
-from adapters.datasets.amazon.normalize_amazon import normalize_route, normalize_route_fleet
+from adapters.datasets.amazon.normalize_amazon import normalize_route, normalize_route_fleet, normalize_multi_route
 from adapters.datasets.solomon.parse_solomon import parse_solomon_file
 from validation.validator import validate_instance, validate_plan
 from optimization.greedy_insertion import greedy_insertion
@@ -158,6 +158,25 @@ def load_amazon_multi_instance(num_vehicles=3, route_id=None, max_orders=None):
     snapshot = normalize_route_fleet(
         route_id, num_vehicles, route_data, package_data, travel_times,
         max_orders=max_orders,
+    )
+    print(f"  Done in {time.perf_counter() - t0:.2f}s")
+    return snapshot
+
+
+def load_amazon_merged_instance(num_routes=3, max_orders_per_vehicle=None):
+    """Gộp nhiều route_id cùng station thành 1 fleet instance."""
+    route_data, package_data, travel_times = _load_amazon_raw_data()
+
+    print("\n=== [4] Chọn các routes cùng station ===")
+    station_id, route_ids = _pick_amazon_routes_from_station(route_data, num_vehicles=num_routes)
+    print(f"  Station: {station_id}")
+    print(f"  Selected routes: {route_ids}")
+
+    print("\n=== [5] Gộp nhiều routes → fleet ===")
+    t0 = time.perf_counter()
+    snapshot = normalize_multi_route(
+        route_ids, route_data, package_data, travel_times,
+        max_orders_per_vehicle=max_orders_per_vehicle
     )
     print(f"  Done in {time.perf_counter() - t0:.2f}s")
     return snapshot
@@ -297,10 +316,12 @@ Ví dụ:
     # Amazon nhiều xe
     parser.add_argument("--multi-vehicle", action="store_true",
                         help="[Amazon] Tạo N xe cùng depot/capacity từ một route")
+    parser.add_argument("--merge-routes", action="store_true",
+                        help="[Amazon] Gộp nhiều route khác nhau cùng station thành 1 fleet")
     parser.add_argument("--num-vehicles", type=int, default=3,
-                        help="[Amazon multi] Số xe tổng hợp. Mặc định: 3")
+                        help="[Amazon multi] Số xe/số route tổng hợp. Mặc định: 3")
     parser.add_argument("--max-orders", type=int, default=None,
-                        help="[Amazon multi] Giới hạn tổng số order trong instance – dùng để test nhanh")
+                        help="[Amazon multi] Giới hạn tổng số order (với merge-routes là trên mỗi xe) – dùng để test nhanh")
     # Solomon
     parser.add_argument("--file", default=None,
                         help="[Solomon] Đường dẫn tới file .txt")
@@ -317,11 +338,18 @@ Ví dụ:
         parser.error("--num-vehicles phải lớn hơn 0.")
     if args.max_orders is not None and args.max_orders <= 0:
         parser.error("--max-orders phải lớn hơn 0.")
-    if args.source == "solomon" and (args.multi_vehicle or args.route or args.max_orders is not None):
-        parser.error("Các tùy chọn --multi-vehicle/--route/--max-orders chỉ dùng với --source amazon.")
+    if args.source == "solomon" and (args.multi_vehicle or args.merge_routes or args.route or args.max_orders is not None):
+        parser.error("Các tùy chọn multi/merge/route/max_orders chỉ dùng với --source amazon.")
+    if args.multi_vehicle and args.merge_routes:
+        parser.error("Chỉ dùng một trong hai: --multi-vehicle hoặc --merge-routes.")
 
     if args.source == "amazon":
-        if args.multi_vehicle:
+        if args.merge_routes:
+            snapshot = load_amazon_merged_instance(
+                num_routes=args.num_vehicles,
+                max_orders_per_vehicle=args.max_orders,
+            )
+        elif args.multi_vehicle:
             snapshot = load_amazon_multi_instance(
                 num_vehicles=args.num_vehicles,
                 route_id=args.route,

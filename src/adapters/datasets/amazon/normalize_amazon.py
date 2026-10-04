@@ -212,9 +212,9 @@ def normalize_multi_route(route_ids, route_data, package_data, travel_times,
         if len(stations) != 1:
             raise ValueError(f"Route {rid} phải có đúng một Station; tìm thấy {len(stations)}.")
         other_id, other = stations[0]
-        if other_id != station_id or abs(other["lat"] - depot_coord[0]) > 1e-6 or abs(other["lng"] - depot_coord[1]) > 1e-6:
+        if other_id != station_id:
             raise ValueError(
-                f"Route {rid} không cùng depot với route đầu ({station_id}); "
+                f"Route {rid} không cùng depot với route đầu (cần: {station_id}, thực tế: {other_id}); "
                 "hãy chọn các route cùng station."
             )
 

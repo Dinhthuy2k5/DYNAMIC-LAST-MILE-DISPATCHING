@@ -28,51 +28,113 @@ def greedy_insertion(instance, planning_time=0.0):
     instance = snapshot_payload(instance)
     orders_by_id = {o["id"]: o for o in instance["orders"]}
     vehicles = instance["vehicles"]
+    time_matrix = instance["time_matrix"]
+    depot_id = instance["depot"]["id"]
 
     routes = {v["id"]: [] for v in vehicles}
     unassigned = [o["id"] for o in instance["orders"] if o["id"] in active_order_ids(instance, planning_time)]
     unserved = []
 
-    while unassigned:
-        best = None  # (score, vehicle_id, position, order_id)
+    vehicles_by_id = {v["id"]: v for v in vehicles}
+    cache = {oid: {} for oid in unassigned}  # cache[oid][vid] = (score, pos)
 
+    def update_cache_for_vehicle(vid):
+        vehicle = vehicles_by_id[vid]
+        if vehicle["status"] == "UNAVAILABLE":
+            for oid in unassigned:
+                cache[oid].pop(vid, None)
+            return
+
+        route = routes[vid]
+        
+        # Pre-calculate state before each position in the route
+        state_at = []
+        curr_node = vehicle["current_stop"]
+        curr_time = max(float(vehicle["start_time"]), float(planning_time))
+        acc_travel = 0.0
+        acc_late = 0.0
+        
+        for roid in route:
+            state_at.append((curr_node, curr_time, acc_travel, acc_late))
+            o = orders_by_id[roid]
+            trav = time_matrix[curr_node][roid]
+            arr = curr_time + trav
+            start_svc = max(arr, o["ready_time"], o["release_time"])
+            acc_late += max(0.0, start_svc - o["deadline"])
+            acc_travel += trav
+            curr_node = roid
+            curr_time = start_svc + o["service_time"]
+            
+        state_at.append((curr_node, curr_time, acc_travel, acc_late))
+        base_travel = acc_travel + (time_matrix[curr_node][depot_id] if route else 0.0)
+        base_lateness = acc_late
+        
         for oid in unassigned:
-            for vehicle in vehicles:
-                if vehicle["status"] == "UNAVAILABLE":
-                    continue  # Ràng buộc cứng: theo bất biến nghiệp vụ Mục 4.5, xe hỏng không nhận order mới.
-                route = routes[vehicle["id"]]
-                if not _capacity_ok(route, oid, vehicle, orders_by_id):
-                    continue  # HARD: capacity không đủ -> không xét vị trí nào trên xe này
+            if not _capacity_ok(route, oid, vehicle, orders_by_id):
+                cache[oid].pop(vid, None)
+                continue
+                
+            best_for_this = None
+            o_insert = orders_by_id[oid]
+            
+            for pos in range(len(route) + 1):
+                curr_n, curr_t, acc_trav, acc_l = state_at[pos]
+                
+                # simulate insertion of oid
+                trav = time_matrix[curr_n][oid]
+                arr = curr_t + trav
+                start_svc = max(arr, o_insert["ready_time"], o_insert["release_time"])
+                acc_l += max(0.0, start_svc - o_insert["deadline"])
+                acc_trav += trav
+                curr_n = oid
+                curr_t = start_svc + o_insert["service_time"]
+                
+                # simulate remainder of the route
+                for roid in route[pos:]:
+                    o_next = orders_by_id[roid]
+                    trav = time_matrix[curr_n][roid]
+                    arr = curr_t + trav
+                    start_svc = max(arr, o_next["ready_time"], o_next["release_time"])
+                    acc_l += max(0.0, start_svc - o_next["deadline"])
+                    acc_trav += trav
+                    curr_n = roid
+                    curr_t = start_svc + o_next["service_time"]
+                    
+                acc_trav += time_matrix[curr_n][depot_id]
+                
+                score = (acc_trav - base_travel) + BETA_LATENESS * (acc_l - base_lateness)
+                
+                if best_for_this is None or score < best_for_this[0]:
+                    best_for_this = (score, pos)
+                    
+            if best_for_this:
+                cache[oid][vid] = best_for_this
+            else:
+                cache[oid].pop(vid, None)
 
-                base_events, base_travel = simulate_route(
-                    vehicle, route, instance, planning_time=planning_time
-                )
-                base_lateness = sum(e["lateness"] for e in base_events)
+    # Initialize cache for all vehicles
+    for v in vehicles:
+        update_cache_for_vehicle(v["id"])
 
-                # thử mọi vị trí chèn 0..len(route)
-                for pos in range(len(route) + 1):
-                    candidate_route = route[:pos] + [oid] + route[pos:]
-                    events, travel = simulate_route(
-                        vehicle, candidate_route, instance, planning_time=planning_time
-                    )
-                    new_lateness = sum(e["lateness"] for e in events)
-
-                    delta_travel = travel - base_travel
-                    delta_lateness = new_lateness - base_lateness
-
-                    score = delta_travel + BETA_LATENESS * delta_lateness
-
-                    if best is None or score < best[0]:
-                        best = (score, vehicle["id"], pos, oid)
-
+    while unassigned:
+        best = None  # (score, vehicle_id, pos, order_id)
+        
+        for oid in unassigned:
+            for vid, (score, pos) in cache[oid].items():
+                if best is None or score < best[0]:
+                    best = (score, vid, pos, oid)
+                    
         if best is None:
-            # còn order nhưng không xe nào đủ capacity -> unserved, đúng z_i=1 trong model
             unserved.extend(unassigned)
             break
-
+            
         _, vid, pos, oid = best
-        routes[vid] = routes[vid][:pos] + [oid] + routes[vid][pos:]
+        routes[vid].insert(pos, oid)
         unassigned.remove(oid)
+        del cache[oid]
+        
+        # Only the modified vehicle needs to recalculate its valid insertions
+        update_cache_for_vehicle(vid)
 
     return DeliveryPlan.candidate(
         routes, unserved, instance.get("state_version", 0), instance["matrix_version"]
