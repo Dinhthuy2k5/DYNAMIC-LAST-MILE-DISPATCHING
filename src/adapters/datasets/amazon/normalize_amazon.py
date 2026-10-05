@@ -157,7 +157,8 @@ def normalize_route_fleet(route_id, num_vehicles, route_data, package_data,
 
 
 def normalize_multi_route(route_ids, route_data, package_data, travel_times,
-                          instance_id=None, max_orders_per_vehicle=None):
+                          instance_id=None, max_orders_per_vehicle=None,
+                          routing_client=None):
     """Gộp nhiều route_id cùng station thành 1 fleet instance.
 
     Chiến lược:
@@ -165,9 +166,17 @@ def normalize_multi_route(route_ids, route_data, package_data, travel_times,
     - Mỗi route_id → 1 vehicle; capacity và stops giữ nguyên theo route gốc.
     - Stop ID được prefix ``<route_id>:<stop_id>`` để tránh đụng độ giữa các route
       (Amazon dùng stop ID cực ngắn như 'AB', 'AE' dễ trùng nhau).
-    - Time matrix: merge tất cả sub-matrix của từng route lại. Travel time
-      giữa stop thuộc 2 route khác nhau KHÔNG có trong dữ liệu gốc → dùng
-      Euclidean distance (lat/lng) làm fallback proxy (tốc độ ~11 m/s ≈ 40 km/h).
+    - Time matrix: ưu tiên tuyệt đối dữ liệu travel_times.json thật của từng
+      route (xe thật đã chạy). Travel time giữa stop thuộc 2 route KHÁC nhau
+      không có trong dữ liệu gốc, xử lý theo 2 trường hợp:
+        * routing_client=None (mặc định): Euclidean distance (lat/lng) làm
+          proxy thô (tốc độ ~11 m/s ≈ 40 km/h) — không cần API key, chạy
+          offline được, nhưng CHỈ nên dùng để test pipeline, không nên diễn
+          giải kết quả như travel time thật.
+        * routing_client được truyền (RoutingClient — vd OpenRouteService):
+          gọi MỘT LẦN (hoặc vài lần nếu quá nhiều cặp) để lấy travel time
+          THẬT cho đúng tập cặp cross-route còn thiếu — không gọi API theo
+          từng cặp, tránh tốn quota.
     - Nếu ``max_orders_per_vehicle`` được đặt, cắt bớt order của mỗi xe để
       instance nhỏ hơn cho test nhanh.
     """
@@ -302,24 +311,24 @@ def normalize_multi_route(route_ids, route_data, package_data, travel_times,
     # Pre-load travel_times sub-matrix cho từng route
     tt = {rid: travel_times[rid] for rid in route_ids if rid in travel_times}
 
+    # Bước 1: điền mọi cặp CÓ trong dữ liệu travel_times.json thật; cặp nào
+    # không tra được (chắc chắn là cross-route) thì để trống, gom lại xử lý
+    # tiếp ở Bước 2 — KHÔNG fallback ngay trong vòng lặp này nữa.
     time_matrix = {}
+    missing_pairs = []
     for from_gid in all_node_ids:
         time_matrix[from_gid] = {}
         from_rid, from_local = global_to_local.get(from_gid, (None, from_gid))
-        from_coord = node_coords.get(from_gid, depot_coord)
         for to_gid in all_node_ids:
             if from_gid == to_gid:
                 time_matrix[from_gid][to_gid] = 0.0
                 continue
             to_rid, to_local = global_to_local.get(to_gid, (None, to_gid))
-            to_coord = node_coords.get(to_gid, depot_coord)
 
-            # Thử tra cứu trong travel_times của route nguồn
             found = None
             if from_rid and from_rid in tt:
                 row = tt[from_rid].get(from_local, {})
                 if to_local and to_gid != station_id:
-                    # to_local chỉ hợp lệ nếu cùng route
                     if to_rid == from_rid:
                         found = row.get(to_local)
                     elif to_gid == station_id:
@@ -327,13 +336,33 @@ def normalize_multi_route(route_ids, route_data, package_data, travel_times,
                 else:
                     found = row.get(to_local)
             if found is None and from_gid == station_id and to_rid and to_rid in tt:
-                # depot → stop: tra trong route của to
                 found = tt[to_rid].get(station_id, {}).get(to_local)
-            if found is None:
-                # fallback: Euclidean
-                found = _euclidean_sec(*from_coord, *to_coord)
 
-            time_matrix[from_gid][to_gid] = float(found)
+            if found is None:
+                missing_pairs.append((from_gid, to_gid))
+            else:
+                time_matrix[from_gid][to_gid] = float(found)
+
+    # Bước 2: điền các cặp còn thiếu (chắc chắn là cross-route).
+    if missing_pairs:
+        if routing_client is not None:
+            missing_from = sorted({a for a, _ in missing_pairs})
+            missing_to = sorted({b for _, b in missing_pairs})
+            from_idx = {gid: i for i, gid in enumerate(missing_from)}
+            to_idx = {gid: i for i, gid in enumerate(missing_to)}
+            result = routing_client.matrix(
+                [node_coords.get(gid, depot_coord) for gid in missing_from],
+                [node_coords.get(gid, depot_coord) for gid in missing_to],
+            )
+            for from_gid, to_gid in missing_pairs:
+                time_matrix[from_gid][to_gid] = float(
+                    result.durations_s[from_idx[from_gid]][to_idx[to_gid]]
+                )
+        else:
+            for from_gid, to_gid in missing_pairs:
+                from_coord = node_coords.get(from_gid, depot_coord)
+                to_coord = node_coords.get(to_gid, depot_coord)
+                time_matrix[from_gid][to_gid] = float(_euclidean_sec(*from_coord, *to_coord))
 
     iid = instance_id or ("amazon_fleet_" + "_".join(r[-8:] for r in route_ids))
     canonical_data = {

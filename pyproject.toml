@@ -1,0 +1,19 @@
+# pyproject.toml — đặt ở gốc repo, ngang hàng với src/
+[project]
+name = "dvrptw-dispatch"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "ortools>=9.10",
+    "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+dvrptw-compare = "application.comparison.compare_b1_b2:main"
+dvrptw-baseline = "cli.run_baseline:main"
