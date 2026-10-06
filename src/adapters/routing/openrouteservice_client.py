@@ -5,6 +5,23 @@
 nguồn×đích/request — đã xử lý bằng cách chia batch trong matrix()).
 
 Đặt key vào biến môi trường ORS_API_KEY, hoặc truyền thẳng qua constructor.
+
+LƯU Ý VỀ FILE .env: Python KHÔNG tự nạp file .env — constructor này chỉ đọc
+os.environ trực tiếp. Muốn dùng file .env, phải tự gọi load_dotenv() TRƯỚC
+khi khởi tạo client (xem test_ors_api.py ở gốc repo làm mẫu):
+    from dotenv import load_dotenv
+    load_dotenv()
+    client = OpenRouteServiceClient()
+Nếu không có .env, export ORS_API_KEY trực tiếp ngoài shell cũng được, không
+bắt buộc phải dùng .env.
+
+LƯU Ý DOMAIN: HeiGIT (đơn vị vận hành ORS) đã deprecate api.openrouteservice.org
+từ 28/04/2026, giảm quota domain cũ còn 10% từ 27/08/2026, và lên kế hoạch tắt
+hẳn trong khoảng 02-06/11/2026 (nguồn:
+https://ask.openrouteservice.org/t/deprecating-api-openrouteservice-org-in-favour-of-api-heigit-org/7912,
+https://ask.openrouteservice.org/t/reducing-the-quota-of-deprecated-api-api-openrouteservice-org/8013).
+Domain mới: https://api.heigit.org/openrouteservice — CHÚ Ý không thừa dấu "/"
+ở cuối (thừa sẽ ra lỗi 405, đã có người gặp và xác nhận trên forum ORS).
 """
 import os
 
@@ -12,7 +29,7 @@ import requests
 
 from .base import DirectionsResult, MatrixResult, RoutingClient, RoutingClientError
 
-DEFAULT_BASE_URL = "https://api.openrouteservice.org"
+DEFAULT_BASE_URL = "https://api.heigit.org/openrouteservice"
 DEFAULT_PROFILE = "driving-car"
 # ORS free tier giới hạn khoảng 2500 cặp nguồn×đích mỗi request matrix —
 # giữ biên an toàn, chia nhỏ destinations nếu vượt.

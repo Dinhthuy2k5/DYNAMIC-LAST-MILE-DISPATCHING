@@ -23,6 +23,9 @@ def _live_position_id(vehicle_id, reserved_ids):
     return candidate
 
 
+_LIVE_PREFIX = "__live_position__:"
+
+
 def patch_time_matrix_for_live_vehicles(instance, vehicle_positions, routing_client):
     """vehicle_positions: {vehicle_id: (lat, lng)} — CHỈ cho các xe có vị trí
     live chưa có trong time_matrix. Xe nào current_stop đã khớp depot/order
@@ -33,6 +36,16 @@ def patch_time_matrix_for_live_vehicles(instance, vehicle_positions, routing_cli
       (và giữa các vị trí live với nhau, nếu >1 xe live cùng lúc).
     - vehicles[*]["current_stop"] được set đúng bằng ID ảo mới cho các xe
       trong vehicle_positions.
+    - matrix_version tăng thêm 1 — plan tạo ra SAU lần vá này phải mang đúng
+      version mới, không được lẫn với plan dựa trên matrix trước khi vá.
+
+    HÀM NÀY KHÔNG CÓ TRẠNG THÁI GIỮA CÁC LẦN GỌI: nếu instance truyền vào đã
+    từng được vá ở lần gọi trước (còn sót node "__live_position__:..." trong
+    time_matrix từ snapshot cũ), các node đó bị LOẠI BỎ trước khi tính toán —
+    mỗi lần vá luôn xuất phát lại từ baseline chỉ gồm depot + order (tọa độ
+    luôn resolve được), tránh lỗi không tìm thấy tọa độ cho node ảo cũ. Muốn
+    patch cho vehicle nào ở lần gọi này, phải đưa vehicle đó vào
+    vehicle_positions — không tự "nhớ" lại vị trí live của lần trước.
 
     Sau khi gọi hàm này, instance trả về sẵn sàng đưa thẳng vào
     build_current_state() như bình thường.
@@ -41,7 +54,15 @@ def patch_time_matrix_for_live_vehicles(instance, vehicle_positions, routing_cli
         return instance
 
     instance = dict(snapshot_payload(instance))
-    time_matrix = {k: dict(v) for k, v in instance["time_matrix"].items()}
+
+    # Loại bỏ mọi node "__live_position__:*" còn sót từ lần vá trước (cả làm
+    # key lẫn làm cột trong các hàng khác) — baseline luôn chỉ gồm depot/order,
+    # tọa độ luôn resolve được qua instance["depot"]/instance["orders"].
+    time_matrix = {
+        k: {k2: v2 for k2, v2 in v.items() if not k2.startswith(_LIVE_PREFIX)}
+        for k, v in instance["time_matrix"].items()
+        if not k.startswith(_LIVE_PREFIX)
+    }
 
     existing_ids = list(time_matrix.keys())
     existing_coords = [
@@ -50,9 +71,6 @@ def patch_time_matrix_for_live_vehicles(instance, vehicle_positions, routing_cli
         next((o["y"], o["x"]) for o in instance["orders"] if o["id"] == nid)
         for nid in existing_ids
     ] if existing_ids else []
-    # Lưu ý: existing_ids lấy từ time_matrix hiện có nên luôn resolve được tọa
-    # độ qua depot/orders — vehicle current_stop cũ (vd virtual start của lần
-    # build trước) không nằm trong time_matrix gốc nên không lọt vào đây.
 
     reserved_ids = set(existing_ids)
     live_ids = []
@@ -88,6 +106,7 @@ def patch_time_matrix_for_live_vehicles(instance, vehicle_positions, routing_cli
                     time_matrix[lid][lid2] = live_to_live.durations_s[i][j]
 
     instance["time_matrix"] = time_matrix
+    instance["matrix_version"] = instance.get("matrix_version", 0) + 1
     instance["vehicles"] = [
         {**v, "current_stop": vid_to_live_id[v["id"]]} if v["id"] in vid_to_live_id else v
         for v in instance["vehicles"]

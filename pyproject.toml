@@ -6,6 +6,12 @@ requires-python = ">=3.10"
 dependencies = [
     "ortools>=9.10",
     "jsonschema>=4.0",
+    "requests>=2.31",
+    # test_ors_api.py (và OpenRouteServiceClient nếu dùng .env — xem ghi chú
+    # trong openrouteservice_client.py) cần python-dotenv để nạp ORS_API_KEY
+    # từ file .env; để trong dependencies chính (không phải optional) vì
+    # test_ors_api.py import trực tiếp, không bọc try/except.
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
